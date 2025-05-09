@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
-import User from '../models/User';
-import sequelize from '../config/db';
+import User from '../models/User.js';
+import sequelize from '../config/db.js';
 import { Op } from 'sequelize';
 
 const seedUsers = async () => {
@@ -18,25 +18,25 @@ const seedUsers = async () => {
         username: 'johndoe',
         email: 'john@example.com',
         password: 'password',
-        role: 'sales' as const
+        role: 'sales'
       },
       {
         username: 'operator',
         email: 'operator@example.com',
         password: 'password',
-        role: 'operator' as const
+        role: 'operator'
       },
       {
         username: 'factory',
         email: 'factory@example.com',
         password: 'password',
-        role: 'factory' as const
+        role: 'factory'
       },
       {
         username: 'admin',
         email: 'admin@example.com',
         password: 'password',
-        role: 'admin' as const
+        role: 'admin'
       }
     ];
 
@@ -75,4 +75,4 @@ const seedUsers = async () => {
   }
 };
 
-seedUsers(); 
+seedUsers();

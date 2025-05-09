@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import User from '../models/User.js';
 import { Op } from 'sequelize';
 
 if (!process.env.JWT_SECRET) {
@@ -127,9 +127,7 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ error: 'Please authenticate' });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      id: number;
-    };
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     const user = await User.findByPk(decoded.id, {
       attributes: ['id', 'username', 'email', 'role']
@@ -146,4 +144,4 @@ router.get('/me', async (req, res) => {
   }
 });
 
-export default router; 
+export default router;

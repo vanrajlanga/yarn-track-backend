@@ -1,22 +1,14 @@
-import express, { Request } from 'express';
-import Project from '../models/Project';
-import User from '../models/User';
-import Yarn from '../models/Yarn';
-import Pattern from '../models/Pattern';
-import { authenticateToken } from '../middleware/auth';
-
-interface AuthRequest extends Request {
-  user?: {
-    id: number;
-    username: string;
-    email: string;
-  };
-}
+import express from 'express';
+import Project from '../models/Project.js';
+import User from '../models/User.js';
+import Yarn from '../models/Yarn.js';
+import Pattern from '../models/Pattern.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Get all projects
-router.get('/', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const projects = await Project.findAll({
       where: { user_id: req.user?.id },
@@ -34,7 +26,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Get single project
-router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const project = await Project.findOne({
       where: { 
@@ -60,7 +52,7 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Create project
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   const { name, description, status } = req.body;
   try {
     const project = await Project.create({
@@ -77,7 +69,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Update project
-router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   const { name, description, status } = req.body;
   try {
     const project = await Project.findOne({
@@ -105,7 +97,7 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Delete project
-router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const project = await Project.findOne({
       where: { 
@@ -126,4 +118,4 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-export default router; 
+export default router;

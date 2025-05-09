@@ -1,12 +1,12 @@
 import { Sequelize } from 'sequelize-typescript';
 import dotenv from 'dotenv';
 import 'reflect-metadata';
-import User from '../models/User';
-import Order from '../models/Order';
-import OrderStatusHistory from '../models/OrderStatusHistory';
-import Project from '../models/Project';
-import Yarn from '../models/Yarn';
-import Pattern from '../models/Pattern';
+import User from '../models/User.js';
+import Order from '../models/Order.js';
+import OrderStatusHistory from '../models/OrderStatusHistory.js';
+import Project from '../models/Project.js';
+import Yarn from '../models/Yarn.js';
+import Pattern from '../models/Pattern.js';
 
 dotenv.config();
 
@@ -20,4 +20,4 @@ const sequelize = new Sequelize({
   logging: false
 });
 
-export default sequelize; 
+export default sequelize;

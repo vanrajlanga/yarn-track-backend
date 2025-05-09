@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import { Order, OrderStatusHistory, User } from '../models';
+import { authenticateToken } from '../middleware/auth.js';
+import { Order, OrderStatusHistory, User } from '../models/index.js';
 import { Op } from 'sequelize';
 
 const router = Router();
@@ -16,7 +16,7 @@ router.get('/', authenticateToken, async (req, res) => {
       endDate
     } = req.query;
 
-    const where: any = {};
+    const where = {};
 
     // Apply role-based filtering
     if (req.user?.role === 'sales') {
@@ -50,13 +50,13 @@ router.get('/', authenticateToken, async (req, res) => {
     if (startDate) {
       where.date = {
         ...where.date,
-        [Op.gte]: new Date(startDate as string)
+        [Op.gte]: new Date(startDate)
       };
     }
     if (endDate) {
       where.date = {
         ...where.date,
-        [Op.lte]: new Date(endDate as string)
+        [Op.lte]: new Date(endDate)
       };
     }
 
@@ -252,4 +252,4 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-export default router; 
+export default router;

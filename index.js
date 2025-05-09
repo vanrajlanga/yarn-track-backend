@@ -1,11 +1,10 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import sequelize from "./src/config/db";
-import projectRoutes from "./src/routes/projects";
-import authRoutes from "./src/routes/auth";
-import orderRoutes from "./src/routes/orders";
-import "reflect-metadata";
+import sequelize from "./src/config/db.js";
+import projectRoutes from "./src/routes/projects.js";
+import authRoutes from "./src/routes/auth.js";
+import orderRoutes from "./src/routes/orders.js";
 
 dotenv.config();
 

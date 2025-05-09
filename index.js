@@ -5,6 +5,8 @@ import sequelize from "./src/config/db.js";
 import projectRoutes from "./src/routes/projects.js";
 import authRoutes from "./src/routes/auth.js";
 import orderRoutes from "./src/routes/orders.js";
+// Import models to ensure they're initialized before database sync
+import "./src/models/index.js";
 
 dotenv.config();
 

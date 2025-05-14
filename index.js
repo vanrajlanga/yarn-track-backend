@@ -36,8 +36,10 @@ app.get("/api/test", async (req, res) => {
 // Initialize database and start server
 const startServer = async () => {
 	try {
-		await sequelize.sync();
-		console.log("Database synchronized successfully");
+		// Just check connection but don't sync automatically on server start
+		// This prevents accidental schema changes in production
+		await sequelize.authenticate();
+		console.log("Database connection established successfully");
 
 		app.listen(port, () => {
 			console.log(`Server is running on port ${port}`);

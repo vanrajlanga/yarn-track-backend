@@ -16,21 +16,16 @@ OrderItem.init(
 		},
 		denier: {
 			type: DataTypes.STRING(20),
-			allowNull: true, // Can be null since it's now independent
+			allowNull: true,
 		},
 		slNumber: {
 			type: DataTypes.STRING(20),
-			allowNull: true, // Can be null since it's now independent
+			allowNull: true,
 		},
 		quantity: {
 			type: DataTypes.INTEGER,
-			allowNull: true, // Can be null if not applicable to denier
-			defaultValue: 1,
-		},
-		itemType: {
-			type: DataTypes.ENUM("denier", "sl_quantity"),
 			allowNull: false,
-			defaultValue: "denier",
+			defaultValue: 1,
 		},
 	},
 	{

@@ -95,33 +95,29 @@ router.post("/", authenticateToken, async (req, res) => {
 			partyName,
 			deliveryParty,
 			salespersonId,
-			deniers,
-			slNumbersWithQuantities,
+			orderItems,
 		} = req.body;
 
 		// Validate required fields
-		if (
-			!sdyNumber ||
-			!date ||
-			!partyName ||
-			!deliveryParty ||
-			!salespersonId
-		) {
+		if (!sdyNumber || !date || !partyName || !salespersonId) {
 			return res
 				.status(400)
 				.json({ error: "Basic order information is required" });
 		}
 
-		// Require at least some denier or SL number entries
+		// Require at least one order item
 		if (
-			(!deniers || !deniers.length) &&
-			(!slNumbersWithQuantities || !slNumbersWithQuantities.length)
+			!orderItems ||
+			!orderItems.length ||
+			!orderItems.some(
+				(item) =>
+					(item.denier && item.denier.trim()) ||
+					(item.slNumber && item.slNumber.trim())
+			)
 		) {
-			return res
-				.status(400)
-				.json({
-					error: "At least one Denier or SL Number with Quantity is required",
-				});
+			return res.status(400).json({
+				error: "At least one item with Denier or SL Number is required",
+			});
 		}
 
 		// Check if user has permission to create orders
@@ -144,36 +140,26 @@ router.post("/", authenticateToken, async (req, res) => {
 			{ transaction }
 		);
 
-		// Create denier items
-		if (deniers && deniers.length) {
+		// Create order items
+		if (orderItems && orderItems.length) {
 			await Promise.all(
-				deniers.map((denier) =>
-					OrderItem.create(
-						{
-							orderId: order.id,
-							denier,
-							itemType: "denier",
-						},
-						{ transaction }
+				orderItems
+					.filter(
+						(item) =>
+							(item.denier && item.denier.trim()) ||
+							(item.slNumber && item.slNumber.trim())
 					)
-				)
-			);
-		}
-
-		// Create SL number items with quantities
-		if (slNumbersWithQuantities && slNumbersWithQuantities.length) {
-			await Promise.all(
-				slNumbersWithQuantities.map((item) =>
-					OrderItem.create(
-						{
-							orderId: order.id,
-							slNumber: item.slNumber,
-							quantity: item.quantity,
-							itemType: "sl_quantity",
-						},
-						{ transaction }
-					)
-				)
+					.map((item) => {
+						return OrderItem.create(
+							{
+								orderId: order.id,
+								denier: item.denier,
+								slNumber: item.slNumber,
+								quantity: item.quantity || 1,
+							},
+							{ transaction }
+						);
+					})
 			);
 		}
 

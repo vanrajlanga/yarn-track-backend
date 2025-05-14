@@ -219,16 +219,7 @@ router.patch("/:id/status", authenticateToken, async (req, res) => {
 
 		// Check if user has permission to update status
 		const canUpdate = (() => {
-			if (req.user.role === "admin") return true;
-			if (req.user.role === "factory") {
-				return (
-					order.currentStatus !== "received" &&
-					order.currentStatus !== "packed"
-				);
-			}
-			if (req.user.role === "operator") {
-				return order.currentStatus === "received";
-			}
+			if (req.user.role === "factory") return true;
 			return false;
 		})();
 

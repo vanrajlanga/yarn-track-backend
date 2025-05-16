@@ -51,13 +51,6 @@ Order.init(
 		timestamps: true,
 		createdAt: "created_at",
 		updatedAt: "updated_at",
-		indexes: [
-			{
-				unique: true,
-				fields: ["sdyNumber"],
-				name: "idx_sdy_number",
-			},
-		],
 	}
 );
 

@@ -104,6 +104,13 @@ router.post("/", authenticateToken, async (req, res) => {
 			orderItems,
 		} = req.body;
 
+		// Check if user has permission to create orders (only sales role can create)
+		if (!req.user || req.user.role !== "sales") {
+			return res
+				.status(403)
+				.json({ error: "Not authorized to create orders" });
+		}
+
 		// Validate required fields
 		if (!sdyNumber || !date || !partyName || !salespersonId) {
 			return res
@@ -126,14 +133,6 @@ router.post("/", authenticateToken, async (req, res) => {
 			});
 		}
 
-		// Check if user has permission to create orders
-		if (!req.user || !["admin", "operator"].includes(req.user.role)) {
-			return res
-				.status(403)
-				.json({ error: "Not authorized to create orders" });
-		}
-
-		// Create order with initial status
 		const order = await Order.create(
 			{
 				sdyNumber,
@@ -204,6 +203,18 @@ router.post("/", authenticateToken, async (req, res) => {
 	} catch (error) {
 		await transaction.rollback();
 		console.error("Error creating order:", error);
+
+		// Handle duplicate SDY number error
+		if (
+			error.name === "SequelizeUniqueConstraintError" &&
+			error.errors?.[0]?.path === "idx_sdy_number"
+		) {
+			return res.status(400).json({
+				error: "An order with this SDY number already exists",
+				field: "sdyNumber",
+			});
+		}
+
 		res.status(500).json({ error: "Failed to create order" });
 	}
 });
@@ -223,10 +234,8 @@ router.patch("/:id/status", authenticateToken, async (req, res) => {
 			return res.status(404).json({ error: "Order not found" });
 		}
 
-		// Check if user has permission to update status
-		const canUpdate = ["factory", "operator"].includes(req.user.role);
-
-		if (!canUpdate) {
+		// Check if user has permission to update status (only factory and operator)
+		if (!["factory", "operator"].includes(req.user.role)) {
 			return res
 				.status(403)
 				.json({ error: "Not authorized to update order status" });
@@ -277,6 +286,14 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 		const { id } = req.params;
 		const updateData = req.body;
 
+		// Check if user has permission to edit orders (only factory and operator)
+		if (!["factory", "operator"].includes(req.user.role)) {
+			await transaction.rollback();
+			return res
+				.status(403)
+				.json({ error: "Not authorized to edit orders" });
+		}
+
 		// Find the order
 		const order = await Order.findByPk(id);
 		if (!order) {
@@ -293,33 +310,40 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 		// Update the order
 		await order.update(updateData, { transaction });
 
-		// If there are orderItems, update them
 		if (updateData.orderItems) {
+			// Validate that we have at least one valid item
+			const validItems = updateData.orderItems.filter(
+				(item) =>
+					(item.denier && item.denier.trim()) ||
+					(item.slNumber && item.slNumber.trim())
+			);
+
+			if (validItems.length === 0) {
+				await transaction.rollback();
+				return res.status(400).json({
+					error: "At least one item with Denier or SL Number is required",
+				});
+			}
+
 			// Delete existing items
 			await OrderItem.destroy({
 				where: { orderId: order.id },
 				transaction,
 			});
 
-			// Create new items
+			// Create new items, ensuring quantity is a number
 			await Promise.all(
-				updateData.orderItems
-					.filter(
-						(item) =>
-							(item.denier && item.denier.trim()) ||
-							(item.slNumber && item.slNumber.trim())
+				validItems.map((item) =>
+					OrderItem.create(
+						{
+							orderId: order.id,
+							denier: item.denier?.trim() || null,
+							slNumber: item.slNumber?.trim() || null,
+							quantity: parseInt(item.quantity, 10) || 1,
+						},
+						{ transaction }
 					)
-					.map((item) =>
-						OrderItem.create(
-							{
-								orderId: order.id,
-								denier: item.denier,
-								slNumber: item.slNumber,
-								quantity: item.quantity || 1,
-							},
-							{ transaction }
-						)
-					)
+				)
 			);
 		}
 

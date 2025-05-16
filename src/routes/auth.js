@@ -147,13 +147,6 @@ router.get("/me", async (req, res) => {
 // Get all users with sales role
 router.get("/sales-users", authenticateToken, async (req, res) => {
 	try {
-		// Check if user has permission (admin or operator can view sales users)
-		if (!req.user || !["admin", "operator"].includes(req.user.role)) {
-			return res
-				.status(403)
-				.json({ error: "Not authorized to view sales users" });
-		}
-
 		// Find all users with sales role
 		const salesUsers = await User.findAll({
 			where: { role: "sales" },

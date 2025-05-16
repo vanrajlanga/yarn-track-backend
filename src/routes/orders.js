@@ -1,6 +1,12 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/auth.js";
-import { Order, OrderStatusHistory, OrderItem, User } from "../models/index.js";
+import {
+	Order,
+	OrderStatusHistory,
+	OrderItem,
+	User,
+	ChangeRequest,
+} from "../models/index.js";
 import { Op } from "sequelize";
 import sequelize from "../config/db.js";
 
@@ -218,10 +224,7 @@ router.patch("/:id/status", authenticateToken, async (req, res) => {
 		}
 
 		// Check if user has permission to update status
-		const canUpdate = (() => {
-			if (req.user.role === "factory") return true;
-			return false;
-		})();
+		const canUpdate = ["factory", "operator"].includes(req.user.role);
 
 		if (!canUpdate) {
 			return res
@@ -263,6 +266,135 @@ router.patch("/:id/status", authenticateToken, async (req, res) => {
 	} catch (error) {
 		console.error("Error updating order status:", error);
 		res.status(500).json({ error: "Failed to update order status" });
+	}
+});
+
+// Update an order (with change request)
+router.patch("/:id", authenticateToken, async (req, res) => {
+	const transaction = await sequelize.transaction();
+
+	try {
+		const { id } = req.params;
+		const updateData = req.body;
+
+		// Find the order
+		const order = await Order.findByPk(id);
+		if (!order) {
+			await transaction.rollback();
+			return res.status(404).json({ error: "Order not found" });
+		}
+
+		// Remove date from update data to prevent changing it
+		if (updateData.date && updateData.date !== order.date) {
+			await transaction.rollback();
+			return res.status(400).json({ error: "Date cannot be modified" });
+		}
+
+		// Update the order
+		await order.update(updateData, { transaction });
+
+		// If there are orderItems, update them
+		if (updateData.orderItems) {
+			// Delete existing items
+			await OrderItem.destroy({
+				where: { orderId: order.id },
+				transaction,
+			});
+
+			// Create new items
+			await Promise.all(
+				updateData.orderItems
+					.filter(
+						(item) =>
+							(item.denier && item.denier.trim()) ||
+							(item.slNumber && item.slNumber.trim())
+					)
+					.map((item) =>
+						OrderItem.create(
+							{
+								orderId: order.id,
+								denier: item.denier,
+								slNumber: item.slNumber,
+								quantity: item.quantity || 1,
+							},
+							{ transaction }
+						)
+					)
+			);
+		}
+
+		await transaction.commit();
+
+		// Fetch the updated order with all its relations
+		const updatedOrder = await Order.findByPk(id, {
+			include: [
+				{
+					model: OrderStatusHistory,
+					include: [{ model: User, attributes: ["id", "username"] }],
+				},
+				{
+					model: OrderItem,
+					as: "items",
+				},
+				{
+					model: User,
+					as: "salesperson",
+					attributes: ["id", "username"],
+				},
+			],
+		});
+
+		res.json(updatedOrder);
+	} catch (error) {
+		await transaction.rollback();
+		console.error("Error updating order:", error);
+		res.status(500).json({ error: "Failed to update order" });
+	}
+});
+
+// Request change to an order (for factory and operator roles)
+router.post("/:id/request-change", authenticateToken, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { requestType } = req.body;
+
+		if (!req.user) {
+			return res.status(401).json({ error: "User not authenticated" });
+		}
+
+		// Only factory and operator roles can request changes
+		if (!["factory", "operator"].includes(req.user.role)) {
+			return res.status(403).json({
+				error: "Only factory and operator roles can request changes",
+			});
+		}
+
+		const order = await Order.findByPk(id);
+		if (!order) {
+			return res.status(404).json({ error: "Order not found" });
+		}
+
+		// Create a simplified change request
+		const changeRequest = await ChangeRequest.create({
+			orderId: order.id,
+			requestedBy: req.user.id,
+			// For simplified requests, just store the role as the field
+			field:
+				req.user.role === "factory" ? "deliveryParty" : "general_edit",
+			oldValue: "Not specified", // Simplified flow doesn't capture specific values
+			newValue: "To be provided after approval",
+			reason: `Change requested by ${req.user.role} user`,
+			status: "pending",
+		});
+
+		// Return the change request
+		res.status(201).json({
+			message: "Change request has been submitted for admin approval",
+			changeRequest,
+		});
+	} catch (error) {
+		console.error("Error creating change request:", error);
+		res.status(500).json({ error: "Failed to create change request" });
 	}
 });
 

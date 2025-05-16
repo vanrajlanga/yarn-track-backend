@@ -1,121 +1,44 @@
-import express from 'express';
-import Project from '../models/Project.js';
-import User from '../models/User.js';
-import Yarn from '../models/Yarn.js';
-import Pattern from '../models/Pattern.js';
-import { authenticateToken } from '../middleware/auth.js';
+import express from "express";
+import User from "../models/User.js";
+import { authenticateToken } from "../middleware/auth.js";
+
+// NOTE: Project, Yarn, and Pattern models have been removed from the application
 
 const router = express.Router();
 
-// Get all projects
-router.get('/', authenticateToken, async (req, res) => {
-  try {
-    const projects = await Project.findAll({
-      where: { user_id: req.user?.id },
-      include: [
-        { model: User, attributes: ['id', 'username', 'email'] },
-        { model: Yarn },
-        { model: Pattern }
-      ]
-    });
-    res.json(projects);
-  } catch (error) {
-    console.error('Error fetching projects:', error);
-    res.status(500).json({ error: 'Failed to fetch projects' });
-  }
+// Projects endpoints have been disabled as the related models were removed
+router.get("/", authenticateToken, async (req, res) => {
+	res.status(404).json({
+		message: "Project functionality has been removed from the application",
+	});
 });
 
-// Get single project
-router.get('/:id', authenticateToken, async (req, res) => {
-  try {
-    const project = await Project.findOne({
-      where: { 
-        id: req.params.id,
-        user_id: req.user?.id
-      },
-      include: [
-        { model: User, attributes: ['id', 'username', 'email'] },
-        { model: Yarn },
-        { model: Pattern }
-      ]
-    });
-    
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
-    
-    res.json(project);
-  } catch (error) {
-    console.error('Error fetching project:', error);
-    res.status(500).json({ error: 'Failed to fetch project' });
-  }
+// Get single project - disabled
+router.get("/:id", authenticateToken, async (req, res) => {
+	res.status(404).json({
+		message: "Project functionality has been removed from the application",
+	});
 });
 
-// Create project
-router.post('/', authenticateToken, async (req, res) => {
-  const { name, description, status } = req.body;
-  try {
-    const project = await Project.create({
-      user_id: req.user?.id,
-      name,
-      description,
-      status
-    });
-    res.status(201).json(project);
-  } catch (error) {
-    console.error('Error creating project:', error);
-    res.status(500).json({ error: 'Failed to create project' });
-  }
+// Create project - disabled
+router.post("/", authenticateToken, async (req, res) => {
+	res.status(404).json({
+		message: "Project functionality has been removed from the application",
+	});
 });
 
-// Update project
-router.put('/:id', authenticateToken, async (req, res) => {
-  const { name, description, status } = req.body;
-  try {
-    const project = await Project.findOne({
-      where: { 
-        id: req.params.id,
-        user_id: req.user?.id
-      }
-    });
-    
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
-
-    await project.update({
-      name,
-      description,
-      status
-    });
-    
-    res.json(project);
-  } catch (error) {
-    console.error('Error updating project:', error);
-    res.status(500).json({ error: 'Failed to update project' });
-  }
+// Update project - disabled
+router.put("/:id", authenticateToken, async (req, res) => {
+	res.status(404).json({
+		message: "Project functionality has been removed from the application",
+	});
 });
 
-// Delete project
-router.delete('/:id', authenticateToken, async (req, res) => {
-  try {
-    const project = await Project.findOne({
-      where: { 
-        id: req.params.id,
-        user_id: req.user?.id
-      }
-    });
-    
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
-
-    await project.destroy();
-    res.json({ message: 'Project deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting project:', error);
-    res.status(500).json({ error: 'Failed to delete project' });
-  }
+// Delete project - disabled
+router.delete("/:id", authenticateToken, async (req, res) => {
+	res.status(404).json({
+		message: "Project functionality has been removed from the application",
+	});
 });
 
 export default router;

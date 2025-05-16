@@ -13,7 +13,6 @@ Order.init(
 		sdyNumber: {
 			type: DataTypes.STRING(20),
 			allowNull: false,
-			unique: true,
 		},
 		date: {
 			type: DataTypes.DATE,
@@ -52,6 +51,13 @@ Order.init(
 		timestamps: true,
 		createdAt: "created_at",
 		updatedAt: "updated_at",
+		indexes: [
+			{
+				unique: true,
+				fields: ["sdyNumber"],
+				name: "idx_sdy_number",
+			},
+		],
 	}
 );
 

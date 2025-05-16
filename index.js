@@ -2,9 +2,9 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import sequelize from "./src/config/db.js";
-import projectRoutes from "./src/routes/projects.js";
 import authRoutes from "./src/routes/auth.js";
 import orderRoutes from "./src/routes/orders.js";
+import changeRequestRoutes from "./src/routes/changeRequests.js";
 // Import models to ensure they're initialized before database sync
 import "./src/models/index.js";
 
@@ -19,8 +19,8 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/projects", projectRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/change-requests", changeRequestRoutes);
 
 // Test database connection
 app.get("/api/test", async (req, res) => {

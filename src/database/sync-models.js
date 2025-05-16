@@ -1,6 +1,12 @@
 import dotenv from "dotenv";
 import sequelize from "../config/db.js";
-import "../models/index.js"; // Import models to ensure they're initialized before sync
+import {
+	User,
+	ChangeRequest,
+	Order,
+	OrderItem,
+	OrderStatusHistory,
+} from "../models/index.js";
 
 dotenv.config();
 
@@ -12,10 +18,24 @@ async function syncModels() {
 		await sequelize.authenticate();
 		console.log("Database connection established successfully");
 
-		// This will create tables if they don't exist
-		// and alter tables if they exist but need to be updated
-		// according to model definitions
-		await sequelize.sync({ alter: true });
+		// Sync all models using alter: true which is safer for existing data
+		console.log("Syncing all models...");
+
+		// First sync models with no dependencies
+		console.log("Syncing User model...");
+		await User.sync({ alter: true });
+
+		console.log("Syncing Order model...");
+		await Order.sync({ alter: true });
+
+		console.log("Syncing OrderItem model...");
+		await OrderItem.sync({ alter: true });
+
+		console.log("Syncing OrderStatusHistory model...");
+		await OrderStatusHistory.sync({ alter: true });
+
+		console.log("Syncing ChangeRequest model...");
+		await ChangeRequest.sync({ alter: true });
 
 		console.log("Database schema has been successfully synchronized");
 		process.exit(0);

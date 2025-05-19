@@ -27,6 +27,19 @@ OrderItem.init(
 			allowNull: false,
 			defaultValue: 1,
 		},
+		status: {
+			type: DataTypes.ENUM(
+				"received",
+				"dyeing",
+				"dyeing_complete",
+				"conning",
+				"conning_complete",
+				"packing",
+				"packed"
+			),
+			allowNull: false,
+			defaultValue: "received",
+		},
 	},
 	{
 		sequelize,

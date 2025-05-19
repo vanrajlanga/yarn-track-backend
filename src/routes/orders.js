@@ -23,12 +23,7 @@ router.get("/", authenticateToken, async (req, res) => {
 		// Apply role-based filtering
 		if (req.user?.role === "sales") {
 			where.salespersonId = req.user.id;
-		} else if (req.user?.role === "factory") {
-			where.currentStatus = {
-				[Op.notIn]: ["received", "packed"],
-			};
 		}
-
 		// Apply status filter
 		if (status && status !== "all") {
 			where.currentStatus = status;
@@ -104,8 +99,8 @@ router.post("/", authenticateToken, async (req, res) => {
 			orderItems,
 		} = req.body;
 
-		// Check if user has permission to create orders (only sales role can create)
-		if (!req.user || req.user.role !== "sales") {
+		// Check if user has permission to create orders (only operator role can create)
+		if (!req.user || req.user.role !== "operator") {
 			return res
 				.status(403)
 				.json({ error: "Not authorized to create orders" });
@@ -307,8 +302,21 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 			return res.status(400).json({ error: "Date cannot be modified" });
 		}
 
-		// Update the order
-		await order.update(updateData, { transaction });
+		// For factory role, only allow editing deliveryParty
+		if (req.user.role === "factory") {
+			const { deliveryParty } = updateData;
+			if (Object.keys(updateData).length > 1 || !deliveryParty) {
+				await transaction.rollback();
+				return res.status(403).json({
+					error: "Factory role can only edit the Delivery Party field",
+				});
+			}
+			// Update only the delivery party
+			await order.update({ deliveryParty }, { transaction });
+		} else {
+			// For operator role, update all fields
+			await order.update(updateData, { transaction });
+		}
 
 		if (updateData.orderItems) {
 			// Validate that we have at least one valid item

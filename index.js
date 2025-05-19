@@ -5,6 +5,7 @@ import sequelize from "./src/config/db.js";
 import authRoutes from "./src/routes/auth.js";
 import orderRoutes from "./src/routes/orders.js";
 import changeRequestRoutes from "./src/routes/changeRequests.js";
+import orderItemsRoutes from "./src/routes/orderItems.js";
 // Import models to ensure they're initialized before database sync
 import "./src/models/index.js";
 
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/change-requests", changeRequestRoutes);
+app.use("/api/order-items", orderItemsRoutes);
 
 // Test database connection
 app.get("/api/test", async (req, res) => {

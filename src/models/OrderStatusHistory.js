@@ -1,5 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
+import OrderItem from './OrderItem.js';
+import User from './User.js';
 
 class OrderStatusHistory extends Model {}
 
@@ -9,9 +11,13 @@ OrderStatusHistory.init({
     primaryKey: true,
     autoIncrement: true
   },
-  orderId: {
+  orderItemId: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    references: {
+      model: OrderItem,
+      key: 'id'
+    }
   },
   status: {
     type: DataTypes.ENUM(
@@ -27,7 +33,11 @@ OrderStatusHistory.init({
   },
   updatedBy: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    references: {
+      model: User,
+      key: 'id'
+    }
   }
 }, {
   sequelize,

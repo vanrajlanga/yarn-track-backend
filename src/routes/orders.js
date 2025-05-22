@@ -24,10 +24,14 @@ router.get("/", authenticateToken, async (req, res) => {
 		if (req.user?.role === "sales") {
 			where.salespersonId = req.user.id;
 		}
-		// Apply status filter
-		if (status && status !== "all") {
-			where.currentStatus = status;
+		// Add condition for admin role to see all orders
+		else if (req.user?.role === "admin") {
+			// Admin can see all orders, no salespersonId filter needed
 		}
+		// Remove status filter for main order
+		// if (status && status !== "all") {
+		// 	where.currentStatus = status;
+		// }
 
 		// Apply search filter
 		if (searchTerm) {
@@ -60,14 +64,22 @@ router.get("/", authenticateToken, async (req, res) => {
 		const orders = await Order.findAll({
 			where,
 			include: [
-				{
-					model: OrderStatusHistory,
-					include: [{ model: User, attributes: ["id", "username"] }],
-					order: [["createdAt", "DESC"]],
-				},
+				// Remove OrderStatusHistory include
+				// {
+				// 	model: OrderStatusHistory,
+				// 	include: [{ model: User, attributes: ["id", "username"] }],
+				// 	order: [["createdAt", "DESC"]],
+				// },
 				{
 					model: OrderItem,
 					as: "items",
+					// Include OrderStatusHistory for order items
+					include: [{
+						model: OrderStatusHistory,
+						as: "statusHistory",
+						include: [{ model: User, attributes: ['id', 'username'] }],
+						order: [['created_at', 'DESC']]
+					}]
 				},
 				{
 					model: User,
@@ -135,13 +147,15 @@ router.post("/", authenticateToken, async (req, res) => {
 				partyName,
 				deliveryParty,
 				salespersonId,
-				currentStatus: "received",
+				// Remove initial currentStatus setting
+				// currentStatus: "received",
 			},
 			{ transaction }
 		);
 
 		// Create order items
 		if (orderItems && orderItems.length) {
+			// Create initial status for each item and create history entry
 			await Promise.all(
 				orderItems
 					.filter(
@@ -149,42 +163,56 @@ router.post("/", authenticateToken, async (req, res) => {
 							(item.denier && item.denier.trim()) ||
 							(item.slNumber && item.slNumber.trim())
 					)
-					.map((item) => {
-						return OrderItem.create(
+					.map(async (item) => {
+						const createdItem = await OrderItem.create(
 							{
 								orderId: order.id,
 								denier: item.denier,
 								slNumber: item.slNumber,
 								quantity: item.quantity || 1,
+								status: "received", // Set initial status for item
 							},
 							{ transaction }
 						);
+						// Create initial status history entry for the item
+						await OrderStatusHistory.create({
+							orderItemId: createdItem.id,
+							status: "received",
+							updatedBy: req.user.id,
+						}, { transaction });
+						return createdItem; // Return the created item for Promise.all
 					})
 			);
 		}
 
-		// Create initial status history entry
-		await OrderStatusHistory.create(
-			{
-				orderId: order.id,
-				status: "received",
-				updatedBy: req.user.id,
-			},
-			{ transaction }
-		);
+		// Remove Create initial status history entry for order
+		// await OrderStatusHistory.create({
+		// 	orderId: order.id,
+		// 	status: "received",
+		// 	updatedBy: req.user.id,
+		// }, { transaction });
 
 		await transaction.commit();
 
-		// Fetch the complete order with relations
+		// Fetch the complete order with relations (including updated items and their history)
 		const completeOrder = await Order.findByPk(order.id, {
 			include: [
-				{
-					model: OrderStatusHistory,
-					include: [{ model: User, attributes: ["id", "username"] }],
-				},
+				// Remove OrderStatusHistory include
+				// {
+				// 	model: OrderStatusHistory,
+				// 	include: [{ model: User, attributes: ["id", "username"] }],
+				// 	order: [["createdAt", "DESC"]],
+				// },
 				{
 					model: OrderItem,
 					as: "items",
+					// Include OrderStatusHistory for order items
+					include: [{
+						model: OrderStatusHistory,
+						as: "statusHistory",
+						include: [{ model: User, attributes: ['id', 'username'] }],
+						order: [['created_at', 'DESC']]
+					}]
 				},
 				{
 					model: User,
@@ -214,64 +242,64 @@ router.post("/", authenticateToken, async (req, res) => {
 	}
 });
 
-// Update order status
-router.patch("/:id/status", authenticateToken, async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { status } = req.body;
+// Remove Update order status route
+// router.patch("/:id/status", authenticateToken, async (req, res) => {
+// 	try {
+// 		const { id } = req.params;
+// 		const { status } = req.body;
 
-		if (!req.user) {
-			return res.status(401).json({ error: "User not authenticated" });
-		}
+// 		if (!req.user) {
+// 			return res.status(401).json({ error: "User not authenticated" });
+// 		}
 
-		const order = await Order.findByPk(id);
-		if (!order) {
-			return res.status(404).json({ error: "Order not found" });
-		}
+// 		const order = await Order.findByPk(id);
+// 		if (!order) {
+// 			return res.status(404).json({ error: "Order not found" });
+// 		}
 
-		// Check if user has permission to update status (only factory and operator)
-		if (!["factory", "operator"].includes(req.user.role)) {
-			return res
-				.status(403)
-				.json({ error: "Not authorized to update order status" });
-		}
+// 		// Check if user has permission to update status (only operator)
+// 		if (req.user.role !== "operator") {
+// 			return res
+// 				.status(403)
+// 				.json({ error: "Not authorized to update order status" });
+// 		}
 
-		// Update order status
-		await order.update({ currentStatus: status });
+// 		// Update order status
+// 		await order.update({ currentStatus: status });
 
-		// Create status history entry
-		await OrderStatusHistory.create({
-			orderId: order.id,
-			status,
-			updatedBy: req.user.id,
-		});
+// 		// Create status history entry
+// 		await OrderStatusHistory.create({
+// 			orderId: order.id,
+// 			status,
+// 			updatedBy: req.user.id,
+// 		});
 
-		// Fetch updated order with relations
-		const updatedOrder = await Order.findByPk(id, {
-			include: [
-				{
-					model: OrderStatusHistory,
-					include: [{ model: User, attributes: ["id", "username"] }],
-					order: [["createdAt", "DESC"]],
-				},
-				{
-					model: OrderItem,
-					as: "items",
-				},
-				{
-					model: User,
-					as: "salesperson",
-					attributes: ["id", "username"],
-				},
-			],
-		});
+// 		// Fetch updated order with relations
+// 		const updatedOrder = await Order.findByPk(id, {
+// 			include: [
+// 				{
+// 					model: OrderStatusHistory,
+// 					include: [{ model: User, attributes: ["id", "username"] }],
+// 					order: [["createdAt", "DESC"]],
+// 				},
+// 				{
+// 					model: OrderItem,
+// 					as: "items",
+// 				},
+// 				{
+// 					model: User,
+// 					as: "salesperson",
+// 					attributes: ["id", "username"],
+// 				},
+// 			],
+// 		});
 
-		res.json(updatedOrder);
-	} catch (error) {
-		console.error("Error updating order status:", error);
-		res.status(500).json({ error: "Failed to update order status" });
-	}
-});
+// 		res.json(updatedOrder);
+// 	} catch (error) {
+// 		console.error("Error updating order status:", error);
+// 		res.status(500).json({ error: "Failed to update order status" });
+// 	}
+// });
 
 // Update an order (with change request)
 router.patch("/:id", authenticateToken, async (req, res) => {
@@ -281,7 +309,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 		const { id } = req.params;
 		const updateData = req.body;
 
-		// Check if user has permission to edit orders (only factory and operator)
+		// Check if user has permission to edit orders
 		if (!["factory", "operator"].includes(req.user.role)) {
 			await transaction.rollback();
 			return res
@@ -302,7 +330,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 			return res.status(400).json({ error: "Date cannot be modified" });
 		}
 
-		// For factory role, only allow editing deliveryParty
+		// For factory role, only allow editing deliveryParty - CORRECTING TO deliveryParty
 		if (req.user.role === "factory") {
 			const { deliveryParty } = updateData;
 			if (Object.keys(updateData).length > 1 || !deliveryParty) {
@@ -311,62 +339,68 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 					error: "Factory role can only edit the Delivery Party field",
 				});
 			}
-			// Update only the delivery party
+			// Update only the deliveryParty
 			await order.update({ deliveryParty }, { transaction });
-		} else {
+		} else if (req.user.role === "operator") {
 			// For operator role, update all fields
 			await order.update(updateData, { transaction });
+		} else {
+			// Sales and Admin roles are not allowed to edit
+			await transaction.rollback();
+			return res.status(403).json({ error: "Not authorized to edit orders" });
 		}
 
-		if (updateData.orderItems) {
-			// Validate that we have at least one valid item
-			const validItems = updateData.orderItems.filter(
-				(item) =>
-					(item.denier && item.denier.trim()) ||
-					(item.slNumber && item.slNumber.trim())
-			);
+		// Order item updates will be handled by a separate endpoint
+		// if (updateData.orderItems) {
+		// 	// Validate that we have at least one valid item
+		// 	const validItems = updateData.orderItems.filter(
+		// 		(item) =>
+		// 			(item.denier && item.denier.trim()) ||
+		// 			(item.slNumber && item.slNumber.trim())
+		// 	);
 
-			if (validItems.length === 0) {
-				await transaction.rollback();
-				return res.status(400).json({
-					error: "At least one item with Denier or SL Number is required",
-				});
-			}
+		// 	if (validItems.length === 0) {
+		// 		await transaction.rollback();
+		// 		return res.status(400).json({
+		// 			error: "At least one item with Denier or SL Number is required",
+		// 		});
+		// 	}
 
-			// Delete existing items
-			await OrderItem.destroy({
-				where: { orderId: order.id },
-				transaction,
-			});
+		// 	// Delete existing items
+		// 	await OrderItem.destroy({
+		// 		where: { orderId: order.id },
+		// 		transaction,
+		// 	});
 
-			// Create new items, ensuring quantity is a number
-			await Promise.all(
-				validItems.map((item) =>
-					OrderItem.create(
-						{
-							orderId: order.id,
-							denier: item.denier?.trim() || null,
-							slNumber: item.slNumber?.trim() || null,
-							quantity: parseInt(item.quantity, 10) || 1,
-						},
-						{ transaction }
-					)
-				)
-			);
-		}
+		// 	// Create new items, ensuring quantity is a number
+		// 	await Promise.all(
+		// 		validItems.map((item) =>
+		// 			OrderItem.create(
+		// 				{
+		// 					orderId: order.id,
+		// 					denier: item.denier?.trim() || null,
+		// 					slNumber: item.slNumber?.trim() || null,
+		// 					quantity: parseInt(item.quantity, 10) || 1,
+		// 				},
+		// 				{ transaction }
+		// 			)
+		// 	);
+		// }
 
 		await transaction.commit();
 
-		// Fetch the updated order with all its relations
+		// Fetch the updated order with all its relations (including updated items and their history)
 		const updatedOrder = await Order.findByPk(id, {
 			include: [
 				{
-					model: OrderStatusHistory,
-					include: [{ model: User, attributes: ["id", "username"] }],
-				},
-				{
 					model: OrderItem,
 					as: "items",
+					include: [{
+						model: OrderStatusHistory,
+						as: "statusHistory",
+						include: [{ model: User, attributes: ['id', 'username'] }],
+						order: [['created_at', 'DESC']]
+					}]
 				},
 				{
 					model: User,
@@ -385,6 +419,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 });
 
 // Request change to an order (for factory and operator roles)
+// Keep this route as it requests changes to the main order details (like deliveryParty)
 router.post("/:id/request-change", authenticateToken, async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -412,7 +447,7 @@ router.post("/:id/request-change", authenticateToken, async (req, res) => {
 			requestedBy: req.user.id,
 			// For simplified requests, just store the role as the field
 			field:
-				req.user.role === "factory" ? "deliveryParty" : "general_edit",
+				req.user.role === "factory" ? "deliveryParty" : "general_edit", // Keep deliveryParty for factory change requests
 			oldValue: "Not specified", // Simplified flow doesn't capture specific values
 			newValue: "To be provided after approval",
 			reason: `Change requested by ${req.user.role} user`,
@@ -441,14 +476,22 @@ router.get("/:id", authenticateToken, async (req, res) => {
 
 		const order = await Order.findByPk(id, {
 			include: [
-				{
-					model: OrderStatusHistory,
-					include: [{ model: User, attributes: ["id", "username"] }],
-					order: [["createdAt", "DESC"]],
-				},
+				// Remove OrderStatusHistory include
+				// {
+				// 	model: OrderStatusHistory,
+				// 	include: [{ model: User, attributes: ["id", "username"] }],
+				// 	order: [["createdAt", "DESC"]],
+				// },
 				{
 					model: OrderItem,
 					as: "items",
+					// Include OrderStatusHistory for order items
+					include: [{
+						model: OrderStatusHistory,
+						as: "statusHistory",
+						include: [{ model: User, attributes: ['id', 'username'] }],
+						order: [['created_at', 'DESC']]
+					}]
 				},
 				{
 					model: User,

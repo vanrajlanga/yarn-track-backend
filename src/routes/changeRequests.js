@@ -38,7 +38,6 @@ router.get("/", authenticateToken, async (req, res) => {
 						"sdyNumber",
 						"partyName",
 						"deliveryParty",
-						"currentStatus",
 					],
 				},
 				{
@@ -58,6 +57,7 @@ router.get("/", authenticateToken, async (req, res) => {
 		res.json(changeRequests);
 	} catch (error) {
 		console.error("Error fetching change requests:", error);
+		console.error(error);
 		res.status(500).json({ error: "Failed to fetch change requests" });
 	}
 });
@@ -137,7 +137,6 @@ router.post("/", authenticateToken, async (req, res) => {
 							"sdyNumber",
 							"partyName",
 							"deliveryParty",
-							"currentStatus",
 						],
 					},
 					{
@@ -219,7 +218,6 @@ router.patch("/:id/process", authenticateToken, async (req, res) => {
 						"sdyNumber",
 						"partyName",
 						"deliveryParty",
-						"currentStatus",
 					],
 				},
 				{
@@ -301,7 +299,6 @@ router.patch("/:id/mark-used", authenticateToken, async (req, res) => {
 						"sdyNumber",
 						"partyName",
 						"deliveryParty",
-						"currentStatus",
 					],
 				},
 				{
@@ -343,7 +340,6 @@ router.get("/:id", authenticateToken, async (req, res) => {
 						"sdyNumber",
 						"partyName",
 						"deliveryParty",
-						"currentStatus",
 					],
 				},
 				{

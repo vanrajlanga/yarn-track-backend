@@ -8,12 +8,17 @@ import ChangeRequest from "./ChangeRequest.js";
 User.hasMany(Order, { foreignKey: "salespersonId", as: "salesperson" });
 Order.belongsTo(User, { foreignKey: "salespersonId", as: "salesperson" });
 
-Order.hasMany(OrderStatusHistory, { foreignKey: "orderId" });
-OrderStatusHistory.belongsTo(Order, { foreignKey: "orderId" });
+// Remove old association for OrderStatusHistory with Order
+// Order.hasMany(OrderStatusHistory, { foreignKey: "orderId" });
+// OrderStatusHistory.belongsTo(Order, { foreignKey: "orderId" });
 
 // New association for OrderItems
 Order.hasMany(OrderItem, { foreignKey: "orderId", as: "items" });
 OrderItem.belongsTo(Order, { foreignKey: "orderId" });
+
+// New association for OrderStatusHistory with OrderItem
+OrderItem.hasMany(OrderStatusHistory, { foreignKey: "orderItemId", as: "statusHistory" });
+OrderStatusHistory.belongsTo(OrderItem, { foreignKey: "orderItemId" });
 
 User.hasMany(OrderStatusHistory, { foreignKey: "updatedBy" });
 OrderStatusHistory.belongsTo(User, { foreignKey: "updatedBy" });

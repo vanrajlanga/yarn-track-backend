@@ -30,19 +30,6 @@ Order.init(
 			type: DataTypes.INTEGER,
 			allowNull: false,
 		},
-		currentStatus: {
-			type: DataTypes.ENUM(
-				"received",
-				"dyeing",
-				"dyeing_complete",
-				"conning",
-				"conning_complete",
-				"packing",
-				"packed"
-			),
-			allowNull: false,
-			defaultValue: "received",
-		},
 	},
 	{
 		sequelize,

@@ -6,6 +6,7 @@ import authRoutes from "./src/routes/auth.js";
 import orderRoutes from "./src/routes/orders.js";
 import changeRequestRoutes from "./src/routes/changeRequests.js";
 import orderItemsRoutes from "./src/routes/orderItems.js";
+import userRoutes from "./src/routes/users.js";
 // Import models to ensure they're initialized before database sync
 import "./src/models/index.js";
 
@@ -23,6 +24,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/change-requests", changeRequestRoutes);
 app.use("/api/order-items", orderItemsRoutes);
+app.use("/api/users", userRoutes);
 
 // Test database connection
 app.get("/api/test", async (req, res) => {

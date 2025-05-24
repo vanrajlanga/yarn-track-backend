@@ -29,6 +29,10 @@ User.init(
 			allowNull: false,
 			defaultValue: "sales",
 		},
+		deletedAt: {
+			type: DataTypes.DATE,
+			allowNull: true,
+		},
 	},
 	{
 		modelName: "User",
@@ -36,7 +40,8 @@ User.init(
 		timestamps: true,
 		createdAt: "created_at",
 		updatedAt: "updated_at",
-		sequelize, // Move sequelize to the end of the options object
+		paranoid: true,
+		sequelize,
 	}
 );
 

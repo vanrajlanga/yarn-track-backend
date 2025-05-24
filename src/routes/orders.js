@@ -12,10 +12,10 @@ import sequelize from "../config/db.js";
 
 const router = Router();
 
-// Get all orders with filters
+// Get all orders with filters and pagination
 router.get("/", authenticateToken, async (req, res) => {
 	try {
-		const { status, searchTerm, salespersonId, startDate, endDate } =
+		const { status, searchTerm, salespersonId, startDate, endDate, page, limit } =
 			req.query;
 
 		const where = {};
@@ -61,7 +61,12 @@ router.get("/", authenticateToken, async (req, res) => {
 			};
 		}
 
-		const orders = await Order.findAll({
+		// Pagination
+		const pageNumber = parseInt(page, 10) || 1;
+		const limitNumber = parseInt(limit, 10) || 10; // Default to 10 items per page
+		const offset = (pageNumber - 1) * limitNumber;
+
+		const { count, rows } = await Order.findAndCountAll({
 			where,
 			include: [
 				// Remove OrderStatusHistory include
@@ -88,9 +93,18 @@ router.get("/", authenticateToken, async (req, res) => {
 				},
 			],
 			order: [["date", "DESC"]],
+			limit: limitNumber,
+			offset: offset,
+			distinct: true,
+			col: 'id',
 		});
 
-		res.json(orders);
+		console.log("Pagination Info:");
+		console.log(`Page: ${pageNumber}, Limit: ${limitNumber}, Offset: ${offset}`);
+		console.log(`Total Count: ${count}, Rows Returned: ${rows.length}`);
+		console.log("Returned Rows:", JSON.stringify(rows, null, 2));
+
+		res.json({ orders: rows, totalCount: count });
 	} catch (error) {
 		console.error("Error fetching orders:", error);
 		res.status(500).json({ error: "Failed to fetch orders" });

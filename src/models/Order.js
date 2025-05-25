@@ -30,6 +30,11 @@ Order.init(
 			type: DataTypes.INTEGER,
 			allowNull: false,
 		},
+		factoryOneTimeEditUsed: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false,
+		},
 	},
 	{
 		sequelize,

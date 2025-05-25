@@ -132,8 +132,8 @@ router.post("/", authenticateToken, async (req, res) => {
 				.json({ error: "Not authorized to create orders" });
 		}
 
-		// Validate required fields
-		if (!sdyNumber || !date || !partyName || !salespersonId) {
+		// Validate required fields (excluding sdyNumber for new orders)
+		if (!date || !partyName || !salespersonId) {
 			return res
 				.status(400)
 				.json({ error: "Basic order information is required" });
@@ -338,26 +338,57 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 			return res.status(404).json({ error: "Order not found" });
 		}
 
+		// Check if factory user has already used their one-time edit
+		if (req.user.role === "factory" && order.factoryOneTimeEditUsed) {
+			await transaction.rollback();
+			return res.status(403).json({
+				error: "Factory role has already used their one-time edit for this order. Please request a change.",
+			});
+		}
+
 		// Remove date from update data to prevent changing it
 		if (updateData.date && updateData.date !== order.date) {
 			await transaction.rollback();
 			return res.status(400).json({ error: "Date cannot be modified" });
 		}
 
-		// For factory role, only allow editing deliveryParty - CORRECTING TO deliveryParty
+		// For factory role, handle one-time edit of deliveryParty and sdyNumber
 		if (req.user.role === "factory") {
-			const { deliveryParty } = updateData;
-			if (Object.keys(updateData).length > 1 || !deliveryParty) {
+			const { deliveryParty, sdyNumber } = updateData;
+
+			// Prepare update object, only including fields present in updateData
+			const factoryUpdate = {};
+			if (deliveryParty !== undefined) factoryUpdate.deliveryParty = deliveryParty;
+			if (sdyNumber !== undefined) factoryUpdate.sdyNumber = sdyNumber;
+
+			// Ensure at least one of the editable fields is being updated
+			if (Object.keys(factoryUpdate).length === 0) {
 				await transaction.rollback();
-				return res.status(403).json({
-					error: "Factory role can only edit the Delivery Party field",
-				});
+				return res.status(400).json({ error: "No valid fields provided for factory edit." });
 			}
-			// Update only the deliveryParty
-			await order.update({ deliveryParty }, { transaction });
+
+			// Validate required fields for factory edit if they are being updated
+			if (deliveryParty !== undefined && !deliveryParty.trim()) {
+				await transaction.rollback();
+				return res.status(400).json({ error: "Delivery Party cannot be empty." });
+			}
+			// SDY Number validation is handled by the model's allowNull: false constraint on creation
+			// but for update, we should ensure if it's provided, it's not empty
+			if (sdyNumber !== undefined && !sdyNumber.trim()) {
+				await transaction.rollback();
+				return res.status(400).json({ error: "SDY Number cannot be empty." });
+			}
+
+			// Update allowed fields and mark one-time edit as used
+			await order.update({ ...factoryUpdate, factoryOneTimeEditUsed: true }, { transaction });
+
 		} else if (req.user.role === "operator") {
-			// For operator role, update all fields
-			await order.update(updateData, { transaction });
+			// For operator role, update all allowed fields
+			// Exclude factoryOneTimeEditUsed from operator updates
+			const operatorUpdateData = { ...updateData };
+			delete operatorUpdateData.factoryOneTimeEditUsed;
+			await order.update(operatorUpdateData, { transaction });
+
 		} else {
 			// Sales and Admin roles are not allowed to edit
 			await transaction.rollback();

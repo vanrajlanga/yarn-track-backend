@@ -631,6 +631,33 @@ router.post("/:id/request-change", authenticateToken, async (req, res) => {
 	}
 });
 
+// Soft delete an order (Admin only)
+router.delete("/:id", authenticateToken, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		// Check if user has permission to delete orders (only admin role can delete)
+		if (!req.user || req.user.role !== "admin") {
+			return res.status(403).json({ error: "Not authorized to delete orders" });
+		}
+
+		// Find the order and soft delete it
+		const order = await Order.findByPk(id);
+
+		if (!order) {
+			return res.status(404).json({ error: "Order not found" });
+		}
+
+		// Use the destroy method for soft delete (due to paranoid: true in model)
+		await order.destroy();
+
+		res.json({ message: "Order deleted successfully" });
+	} catch (error) {
+		console.error("Error deleting order:", error);
+		res.status(500).json({ error: "Failed to delete order" });
+	}
+});
+
 // Get order details
 router.get("/:id", authenticateToken, async (req, res) => {
 	try {

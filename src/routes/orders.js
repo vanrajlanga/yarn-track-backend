@@ -94,7 +94,7 @@ router.get("/", authenticateToken, async (req, res) => {
 					attributes: ["id", "username"],
 				},
 			],
-			order: [["date", "DESC"]],
+			order: [["created_at", "DESC"]],
 			limit: limitNumber,
 			offset: offset,
 			distinct: true,
@@ -189,7 +189,7 @@ router.get("/export", authenticateToken, async (req, res) => {
 					attributes: ["id", "username"],
 				},
 			],
-			order: [["date", "DESC"]],
+			order: [["created_at", "DESC"]],
 		});
 
 		// Create a new workbook and worksheet
@@ -435,65 +435,6 @@ router.post("/", authenticateToken, async (req, res) => {
 		res.status(500).json({ error: "Failed to create order" });
 	}
 });
-
-// Remove Update order status route
-// router.patch("/:id/status", authenticateToken, async (req, res) => {
-// 	try {
-// 		const { id } = req.params;
-// 		const { status } = req.body;
-
-// 		if (!req.user) {
-// 			return res.status(401).json({ error: "User not authenticated" });
-// 		}
-
-// 		const order = await Order.findByPk(id);
-// 		if (!order) {
-// 			return res.status(404).json({ error: "Order not found" });
-// 		}
-
-// 		// Check if user has permission to update status (only operator)
-// 		if (req.user.role !== "operator") {
-// 			return res
-// 				.status(403)
-// 				.json({ error: "Not authorized to update order status" });
-// 		}
-
-// 		// Update order status
-// 		await order.update({ currentStatus: status });
-
-// 		// Create status history entry
-// 		await OrderStatusHistory.create({
-// 			orderId: order.id,
-// 			status,
-// 			updatedBy: req.user.id,
-// 		});
-
-// 		// Fetch updated order with relations
-// 		const updatedOrder = await Order.findByPk(id, {
-// 			include: [
-// 				{
-// 					model: OrderStatusHistory,
-// 					include: [{ model: User, attributes: ["id", "username"] }],
-// 					order: [["createdAt", "DESC"]],
-// 				},
-// 				{
-// 					model: OrderItem,
-// 					as: "items",
-// 				},
-// 				{
-// 					model: User,
-// 					as: "salesperson",
-// 					attributes: ["id", "username"],
-// 				},
-// 			],
-// 		});
-
-// 		res.json(updatedOrder);
-// 	} catch (error) {
-// 		console.error("Error updating order status:", error);
-// 		res.status(500).json({ error: "Failed to update order status" });
-// 	}
-// });
 
 // Update an order (with change request)
 router.patch("/:id", authenticateToken, async (req, res) => {
